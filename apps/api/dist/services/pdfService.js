@@ -169,10 +169,9 @@ export async function embedSignatureInPDF({ contratoId, pessoaId, pessoaNome, pe
     const { promises: fs } = await import("fs");
     const path = await import("path");
     const uploadDir = process.env.UPLOAD_DIR ?? "/var/www/icatto-api/uploads";
-    const pdfPath = path.join(uploadDir, contratoId, "contrato_locacao.pdf");
-    // Procura o arquivo com timestamp no nome
     const dir = path.join(uploadDir, contratoId);
-    let pdfFilePath = pdfPath;
+    // Procura o arquivo contrato_locacao.pdf na raiz da pasta do contrato
+    let pdfFilePath = null;
     try {
         const files = await fs.readdir(dir);
         const pdfFile = files.find((f) => f.endsWith("contrato_locacao.pdf"));
@@ -182,6 +181,8 @@ export async function embedSignatureInPDF({ contratoId, pessoaId, pessoaNome, pe
     catch {
         return { driveUrl: contrato.contratoUrl };
     }
+    if (!pdfFilePath)
+        return { driveUrl: contrato.contratoUrl };
     let existingPdfBytes;
     try {
         existingPdfBytes = await fs.readFile(pdfFilePath);
