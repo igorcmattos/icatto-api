@@ -2,6 +2,7 @@ import Fastify from "fastify";
 import cors from "@fastify/cors";
 import jwt from "@fastify/jwt";
 import multipart from "@fastify/multipart";
+import staticFiles from "@fastify/static";
 import { authRoutes } from "./routes/auth.js";
 import { imoveisRoutes } from "./routes/imoveis.js";
 import { pessoasRoutes } from "./routes/pessoas.js";
@@ -21,6 +22,12 @@ await app.register(jwt, {
 });
 await app.register(multipart, {
     limits: { fileSize: 20 * 1024 * 1024 }, // 20MB
+});
+// Servir arquivos de upload
+const uploadDir = process.env.UPLOAD_DIR ?? "/var/www/icatto-api/uploads";
+await app.register(staticFiles, {
+    root: uploadDir,
+    prefix: "/uploads/",
 });
 // Routes
 await app.register(authRoutes, { prefix: "/auth" });
