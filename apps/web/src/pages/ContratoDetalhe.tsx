@@ -53,8 +53,10 @@ export default function ContratoDetalhe() {
     const fd = new FormData();
     fd.append("pessoaId", pessoaId);
     fd.append("tipo", tipo);
-    fd.append("arquivo", file);
-    await api.post(`/documentos/${id}/upload`, fd);
+    fd.append("file", file);
+    await api.post(`/documentos/${id}/upload`, fd, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
     reload();
   };
 
