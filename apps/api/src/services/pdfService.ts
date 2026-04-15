@@ -204,27 +204,31 @@ export async function embedSignatureInPDF({
 }) {
   const { prisma: db } = await import("../lib/prisma.js");
   const contrato = await db.contrato.findUnique({ where: { id: contratoId } });
-  if (!contrato?.contratoUrl) {
-    return { driveUrl: null };
+  if (!contrato?.contratoUrl) return { driveUrl: null };
+
+  // Busca o PDF no armazenamento local
+  const { promises: fs } = await import("fs");
+  const path = await import("path");
+  const uploadDir = process.env.UPLOAD_DIR ?? "/var/www/icatto-api/uploads";
+  const pdfPath = path.join(uploadDir, contratoId, "contrato_locacao.pdf");
+
+  // Procura o arquivo com timestamp no nome
+  const dir = path.join(uploadDir, contratoId);
+  let pdfFilePath = pdfPath;
+  try {
+    const files = await fs.readdir(dir);
+    const pdfFile = files.find((f) => f.endsWith("contrato_locacao.pdf"));
+    if (pdfFile) pdfFilePath = path.join(dir, pdfFile);
+  } catch {
+    return { driveUrl: contrato.contratoUrl };
   }
 
-  // Baixa o PDF existente do Drive e embute a assinatura
-  const drive = (await import("googleapis")).google.drive;
-  const { google } = await import("googleapis");
-  const credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON ?? "{}");
-  const auth = new google.auth.GoogleAuth({ credentials, scopes: ["https://www.googleapis.com/auth/drive"] });
-  const driveClient = google.drive({ version: "v3", auth });
-
-  // Obtém o PDF pelo fileId salvo no contrato
-  const fileListRes = await driveClient.files.list({
-    q: `'${contrato.driveFolderId}' in parents and name='contrato_locacao.pdf' and trashed=false`,
-    fields: "files(id)",
-  });
-  const pdfFileId = fileListRes.data.files?.[0]?.id;
-  if (!pdfFileId) return { driveUrl: contrato.contratoUrl };
-
-  const pdfStream = await driveClient.files.get({ fileId: pdfFileId, alt: "media" }, { responseType: "arraybuffer" });
-  const existingPdfBytes = pdfStream.data as ArrayBuffer;
+  let existingPdfBytes: Buffer;
+  try {
+    existingPdfBytes = await fs.readFile(pdfFilePath);
+  } catch {
+    return { driveUrl: contrato.contratoUrl };
+  }
 
   const pdfDoc = await PDFDocument.load(existingPdfBytes);
   const sigImage = await pdfDoc.embedPng(signatureBuffer);
@@ -233,7 +237,7 @@ export async function embedSignatureInPDF({
   const lastPage = pages[pages.length - 1];
   const { width } = lastPage.getSize();
 
-  // Posição da assinatura: proprietário à esquerda, inquilino à direita
+  // Posição: proprietário à esquerda, inquilino à direita
   const xPos = pessoaTipo === "PROPRIETARIO" ? 60 : width / 2 + 10;
   const sigDims = sigImage.scaleToFit(160, 50);
   lastPage.drawImage(sigImage, { x: xPos, y: 30, width: sigDims.width, height: sigDims.height });
@@ -242,14 +246,7 @@ export async function embedSignatureInPDF({
   lastPage.drawText(pessoaNome, { x: xPos, y: 25, size: 7, font, color: rgb(0.3, 0.3, 0.3) });
 
   const signedPdfBytes = await pdfDoc.save();
-  const signedBuffer = Buffer.from(signedPdfBytes);
-
-  // Substitui o arquivo no Drive
-  const { Readable } = await import("stream");
-  await driveClient.files.update({
-    fileId: pdfFileId,
-    media: { mimeType: "application/pdf", body: Readable.from(signedBuffer) },
-  });
+  await fs.writeFile(pdfFilePath, signedPdfBytes);
 
   return { driveUrl: contrato.contratoUrl };
 }
