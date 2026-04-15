@@ -3,6 +3,7 @@ import { useAuthStore } from "./hooks/useAuthStore.ts";
 import LoginPage from "./pages/LoginPage.tsx";
 import DashboardPage from "./pages/DashboardPage.tsx";
 import ImoveisPage from "./pages/ImoveisPage.tsx";
+import PessoasPage from "./pages/PessoasPage.tsx";
 import ContratosPage from "./pages/ContratosPage.tsx";
 import NovoContratoPage from "./pages/NovoContratoPage.tsx";
 import ContratoDetalhe from "./pages/ContratoDetalhe.tsx";
@@ -29,6 +30,7 @@ export default function App() {
       >
         <Route index element={<DashboardPage />} />
         <Route path="imoveis" element={<ImoveisPage />} />
+        <Route path="pessoas" element={<PessoasPage />} />
         <Route path="contratos" element={<ContratosPage />} />
         <Route path="contratos/novo" element={<NovoContratoPage />} />
         <Route path="contratos/:id" element={<ContratoDetalhe />} />

@@ -22,6 +22,7 @@ export default function Layout() {
           {[
             { to: "/", label: "Dashboard", icon: "⊞" },
             { to: "/imoveis", label: "Imóveis", icon: "🏠" },
+            { to: "/pessoas", label: "Pessoas", icon: "👥" },
             { to: "/contratos", label: "Contratos", icon: "📄" },
           ].map(({ to, label, icon }) => (
             <NavLink
