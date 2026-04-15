@@ -1,0 +1,252 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────
+// IMOBILIÁRIA (tenant do sistema)
+// ─────────────────────────────────────────────
+model Imobiliaria {
+  id        String   @id @default(cuid())
+  nome      String
+  cnpj      String   @unique
+  email     String   @unique
+  senha     String
+  telefone  String?
+  logoUrl   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  imoveis    Imovel[]
+  pessoas    Pessoa[]
+  contratos  Contrato[]
+}
+
+// ─────────────────────────────────────────────
+// IMÓVEL
+// ─────────────────────────────────────────────
+model Imovel {
+  id            String     @id @default(cuid())
+  imobiliariaId String
+  imobiliaria   Imobiliaria @relation(fields: [imobiliariaId], references: [id])
+
+  endereco      String
+  numero        String
+  complemento   String?
+  bairro        String
+  cidade        String
+  estado        String
+  cep           String
+  tipo          TipoImovel
+  areaM2        Float?
+  quartos       Int?
+  banheiros     Int?
+  vagas         Int?
+  valorAluguel  Decimal    @db.Decimal(10, 2)
+  descricao     String?
+  fotos         String[]   // URLs Google Drive
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  contratos Contrato[]
+}
+
+enum TipoImovel {
+  APARTAMENTO
+  CASA
+  KITNET
+  SALA_COMERCIAL
+  GALPAO
+  TERRENO
+}
+
+// ─────────────────────────────────────────────
+// PESSOA (proprietário ou inquilino)
+// ─────────────────────────────────────────────
+model Pessoa {
+  id            String      @id @default(cuid())
+  imobiliariaId String
+  imobiliaria   Imobiliaria @relation(fields: [imobiliariaId], references: [id])
+
+  nome          String
+  cpf           String
+  rg            String?
+  dataNasc      DateTime?
+  email         String
+  telefone      String
+  profissao     String?
+  rendaMensal   Decimal?   @db.Decimal(10, 2)
+  estadoCivil   String?
+  nacionalidade String?    @default("Brasileira")
+  tipo          TipoPessoa
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  documentos         Documento[]
+  contratosProprietario Contrato[] @relation("Proprietario")
+  contratosInquilino    Contrato[] @relation("Inquilino")
+  assinaturaRequests    AssinaturaRequest[]
+
+  @@unique([cpf, imobiliariaId])
+}
+
+enum TipoPessoa {
+  PROPRIETARIO
+  INQUILINO
+}
+
+// ─────────────────────────────────────────────
+// CONTRATO
+// ─────────────────────────────────────────────
+model Contrato {
+  id            String         @id @default(cuid())
+  imobiliariaId String
+  imobiliaria   Imobiliaria    @relation(fields: [imobiliariaId], references: [id])
+
+  imovelId      String
+  imovel        Imovel         @relation(fields: [imovelId], references: [id])
+
+  proprietarioId String
+  proprietario   Pessoa         @relation("Proprietario", fields: [proprietarioId], references: [id])
+
+  inquilinoId    String
+  inquilino      Pessoa         @relation("Inquilino", fields: [inquilinoId], references: [id])
+
+  status         StatusContrato @default(DOCUMENTACAO)
+  dataInicio     DateTime?
+  dataFim        DateTime?
+  valorAluguel   Decimal        @db.Decimal(10, 2)
+  diaVencimento  Int            @default(10)
+  garantia       TipoGarantia?
+  observacoes    String?
+
+  // Google Drive
+  driveFolderId       String?  // ID da pasta raiz do contrato no Drive
+  driveFolderUrl      String?
+  contratoUrl         String?  // URL do PDF final
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  documentos         Documento[]
+  vistoria           Vistoria?
+  assinaturaRequests AssinaturaRequest[]
+}
+
+enum StatusContrato {
+  DOCUMENTACAO
+  VISTORIA
+  CONTRATO_GERADO
+  ASSINATURA_PENDENTE
+  CONCLUIDO
+  CANCELADO
+}
+
+enum TipoGarantia {
+  CAUCAO
+  FIADOR
+  SEGURO_FIANCA
+  TITULO_CAPITALIZACAO
+}
+
+// ─────────────────────────────────────────────
+// DOCUMENTO
+// ─────────────────────────────────────────────
+model Documento {
+  id         String          @id @default(cuid())
+  contratoId String
+  contrato   Contrato        @relation(fields: [contratoId], references: [id])
+  pessoaId   String
+  pessoa     Pessoa          @relation(fields: [pessoaId], references: [id])
+
+  tipo       TipoDocumento
+  nome       String          // nome original do arquivo
+  driveFileId  String?
+  driveUrl     String?
+  status     StatusDocumento @default(PENDENTE)
+  observacao String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum TipoDocumento {
+  RG
+  CPF
+  CNH
+  COMPROVANTE_RESIDENCIA
+  COMPROVANTE_RENDA
+  DECLARACAO_IR
+  ESCRITURA_IMOVEL
+  IPTU
+  FICHA_CADASTRAL
+  OUTRO
+}
+
+enum StatusDocumento {
+  PENDENTE
+  APROVADO
+  REJEITADO
+}
+
+// ─────────────────────────────────────────────
+// VISTORIA
+// ─────────────────────────────────────────────
+model Vistoria {
+  id         String   @id @default(cuid())
+  contratoId String   @unique
+  contrato   Contrato @relation(fields: [contratoId], references: [id])
+
+  dataVistoria DateTime @default(now())
+  laudoUrl     String?  // PDF gerado no Drive
+  observacoes  String?
+
+  comodos Comodo[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Comodo {
+  id         String   @id @default(cuid())
+  vistoriaId String
+  vistoria   Vistoria @relation(fields: [vistoriaId], references: [id])
+
+  nome       String   // Ex: "Sala de estar", "Quarto 1"
+  descricao  String?  // Estado geral
+  fotos      String[] // URLs Google Drive
+
+  createdAt DateTime @default(now())
+}
+
+// ─────────────────────────────────────────────
+// ASSINATURA ELETRÔNICA
+// ─────────────────────────────────────────────
+model AssinaturaRequest {
+  id         String            @id @default(cuid())
+  contratoId String
+  contrato   Contrato          @relation(fields: [contratoId], references: [id])
+  pessoaId   String
+  pessoa     Pessoa            @relation(fields: [pessoaId], references: [id])
+
+  token      String            @unique @default(cuid())
+  status     StatusAssinatura  @default(PENDENTE)
+  signedAt   DateTime?
+  driveUrl   String?           // URL do PDF assinado
+  ipAddress  String?
+
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+}
+
+enum StatusAssinatura {
+  PENDENTE
+  ASSINADO
+  EXPIRADO
+}
