@@ -2,6 +2,7 @@ import { FastifyInstance } from "fastify";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
+import { enviarEmailAssinatura } from "../services/emailService.js";
 
 export async function authRoutes(app: FastifyInstance) {
   // Login da imobiliária
@@ -100,6 +101,27 @@ export async function authRoutes(app: FastifyInstance) {
     });
 
     const baseUrl = process.env.FRONTEND_URL ?? "http://localhost:5173";
-    return { token: request.token, link: `${baseUrl}/assinar/${request.token}` };
+    const link = `${baseUrl}/assinar/${request.token}`;
+
+    // Envia e-mail automaticamente
+    const pessoa = await prisma.pessoa.findUnique({ where: { id: pessoaId } });
+    const contratoCompleto = await prisma.contrato.findUnique({
+      where: { id: contratoId },
+      include: { imovel: true, imobiliaria: true },
+    });
+
+    if (pessoa && contratoCompleto) {
+      enviarEmailAssinatura({
+        destinatario: pessoa.email,
+        nomeDestinatario: pessoa.nome,
+        tipoDestinatario: pessoa.tipo,
+        nomeImobiliaria: contratoCompleto.imobiliaria.nome,
+        enderecoImovel: `${contratoCompleto.imovel.endereco}, ${contratoCompleto.imovel.numero} — ${contratoCompleto.imovel.cidade}`,
+        linkAssinatura: link,
+        expiresAt: request.expiresAt,
+      }).catch(console.error);
+    }
+
+    return { token: request.token, link };
   });
 }
