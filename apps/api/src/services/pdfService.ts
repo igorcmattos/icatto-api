@@ -212,12 +212,18 @@ export async function embedSignatureInPDF({
   const uploadDir = process.env.UPLOAD_DIR ?? "/var/www/icatto-api/uploads";
   const dir = path.join(uploadDir, contratoId);
 
-  // Procura o arquivo contrato_locacao.pdf na raiz da pasta do contrato
+  // Procura o PDF mais recente na raiz da pasta do contrato
   let pdfFilePath: string | null = null;
   try {
     const files = await fs.readdir(dir);
-    const pdfFile = files.find((f) => f.endsWith("contrato_locacao.pdf"));
-    if (pdfFile) pdfFilePath = path.join(dir, pdfFile);
+    const pdfFiles = files.filter((f) => f.endsWith("contrato_locacao.pdf"));
+    // Ordena por timestamp (prefixo numérico) e pega o mais recente
+    pdfFiles.sort((a, b) => {
+      const tsA = parseInt(a.split("-")[0]) || 0;
+      const tsB = parseInt(b.split("-")[0]) || 0;
+      return tsB - tsA;
+    });
+    if (pdfFiles.length > 0) pdfFilePath = path.join(dir, pdfFiles[0]);
   } catch {
     return { driveUrl: contrato.contratoUrl };
   }
