@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { api } from "../services/api.ts";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -139,6 +139,13 @@ export default function ContratoDetalhe() {
       <div className="bg-white border border-gray-200 rounded-xl p-5">
         <h3 className="font-semibold mb-4">Ações</h3>
         <div className="flex flex-wrap gap-3">
+          <Link
+            to={`/contratos/${id}/vistoria`}
+            className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Vistoria
+          </Link>
+
           {contrato.status === "VISTORIA" || contrato.status === "DOCUMENTACAO" ? (
             <button onClick={gerarPDF} disabled={loadingPDF} className="px-4 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50">
               {loadingPDF ? "Gerando..." : "Gerar Contrato PDF"}

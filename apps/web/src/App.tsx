@@ -8,6 +8,7 @@ import ContratosPage from "./pages/ContratosPage.tsx";
 import NovoContratoPage from "./pages/NovoContratoPage.tsx";
 import ContratoDetalhe from "./pages/ContratoDetalhe.tsx";
 import AssinarPage from "./pages/AssinarPage.tsx";
+import VistoriaPage from "./pages/VistoriaPage.tsx";
 import Layout from "./components/Layout.tsx";
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -34,6 +35,7 @@ export default function App() {
         <Route path="contratos" element={<ContratosPage />} />
         <Route path="contratos/novo" element={<NovoContratoPage />} />
         <Route path="contratos/:id" element={<ContratoDetalhe />} />
+        <Route path="contratos/:contratoId/vistoria" element={<VistoriaPage />} />
       </Route>
     </Routes>
   );
