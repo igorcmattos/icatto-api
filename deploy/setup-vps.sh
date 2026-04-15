@@ -26,13 +26,8 @@ CREATE DATABASE icatto_db OWNER icatto;
 GRANT ALL PRIVILEGES ON DATABASE icatto_db TO icatto;
 EOF
 
-echo "=== Clonando o projeto ==="
-mkdir -p /var/www
-cd /var/www
-# git clone https://seu-repo/icatto-api.git
-# cd icatto-api
-
 echo "=== Instalando dependências Node ==="
+cd /var/www/icatto-api
 npm install
 
 echo "=== Gerando Prisma client e rodando migrations ==="
@@ -45,7 +40,8 @@ npm run build --workspace=apps/api
 
 echo "=== Build do Frontend ==="
 npm run build --workspace=apps/web
-cp -r apps/web/dist /var/www/icatto-web
+mkdir -p /var/www/icatto-web
+cp -r apps/web/dist/* /var/www/icatto-web/
 
 echo "=== Configurando Nginx ==="
 cp deploy/nginx.conf /etc/nginx/sites-available/icatto
@@ -53,7 +49,6 @@ ln -sf /etc/nginx/sites-available/icatto /etc/nginx/sites-enabled/icatto
 nginx -t && systemctl reload nginx
 
 echo "=== Iniciando API com PM2 ==="
-cd /var/www/icatto-api
 pm2 start apps/api/dist/server.js --name icatto-api
 pm2 save
 pm2 startup systemd -u root --hp /root
