@@ -54,6 +54,12 @@ export default function VistoriaPage() {
     reload();
   };
 
+  const handleExcluirFoto = async (vistoriaId: string, comodoId: string, fotoUrl: string) => {
+    if (!confirm("Excluir esta foto?")) return;
+    await api.delete(`/vistorias/${vistoriaId}/comodos/${comodoId}/fotos`, { data: { fotoUrl } });
+    reload();
+  };
+
   const handleGerarLaudo = async () => {
     setGerandoPDF(true);
     try {
@@ -187,11 +193,19 @@ export default function VistoriaPage() {
               {comodo.fotos?.length > 0 && (
                 <div className="grid grid-cols-4 gap-2 mt-3">
                   {comodo.fotos.map((url: string, i: number) => (
-                    <a key={i} href={url} target="_blank" rel="noreferrer">
-                      <div className="bg-gray-100 rounded-lg h-20 flex items-center justify-center text-xs text-gray-400 hover:bg-gray-200 overflow-hidden">
-                        <img src={url} alt={`foto ${i + 1}`} className="w-full h-full object-cover rounded-lg" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
-                      </div>
-                    </a>
+                    <div key={i} className="relative group">
+                      <a href={url} target="_blank" rel="noreferrer">
+                        <div className="bg-gray-100 rounded-lg h-20 overflow-hidden">
+                          <img src={url} alt={`foto ${i + 1}`} className="w-full h-full object-cover rounded-lg" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                        </div>
+                      </a>
+                      <button
+                        onClick={() => handleExcluirFoto(vistoria.id, comodo.id, url)}
+                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 text-xs items-center justify-center hidden group-hover:flex"
+                      >
+                        ✕
+                      </button>
+                    </div>
                   ))}
                 </div>
               )}

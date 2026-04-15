@@ -83,6 +83,34 @@ export async function vistoriasRoutes(app: FastifyInstance) {
     });
   });
 
+  // Excluir foto de um cômodo
+  app.delete("/:vistoriaId/comodos/:comodoId/fotos", async (req, reply) => {
+    const { id: imobiliariaId } = req.user as { id: string };
+    const { vistoriaId, comodoId } = req.params as { vistoriaId: string; comodoId: string };
+    const { fotoUrl } = req.body as { fotoUrl: string };
+
+    const comodo = await prisma.comodo.findFirst({
+      where: { id: comodoId, vistoriaId, vistoria: { contrato: { imobiliariaId } } },
+    });
+    if (!comodo) return reply.status(404).send({ error: "Cômodo não encontrado." });
+
+    // Remove a foto do array
+    const novasFotos = comodo.fotos.filter((f) => f !== fotoUrl);
+    await prisma.comodo.update({ where: { id: comodoId }, data: { fotos: novasFotos } });
+
+    // Remove o arquivo do disco
+    try {
+      const { promises: fs } = await import("fs");
+      const uploadDir = process.env.UPLOAD_DIR ?? "/var/www/icatto-api/uploads";
+      const filePath = fotoUrl.replace(/.*\/api\/uploads\//, `${uploadDir}/`);
+      await fs.unlink(filePath);
+    } catch {
+      // ignora se arquivo não existir
+    }
+
+    return reply.status(204).send();
+  });
+
   // Gerar PDF do laudo de vistoria
   app.post("/:vistoriaId/gerar-laudo", async (req, reply) => {
     const { id: imobiliariaId } = req.user as { id: string };
